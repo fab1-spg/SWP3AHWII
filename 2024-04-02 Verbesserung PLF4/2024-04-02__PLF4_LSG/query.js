@@ -16,5 +16,7 @@ async function getWatchlistNamesByUser(userId) {
     });
     return watchlist.tracks;
   }
+
+  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist};
   
 
