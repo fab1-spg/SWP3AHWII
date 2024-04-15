@@ -9,5 +9,12 @@ async function getWatchlistNamesByUser(userId) {
     return user.watchLists.map(watchlist => watchlist.name);
   }
   
-
+  async function getTracksByWatchlist(watchlistId) {
+    const watchlist = await prisma.watchlist.findUnique({
+      where: { id: watchlistId },
+      include: { tracks: true },
+    });
+    return watchlist.tracks;
+  }
+  
 
