@@ -1,83 +1,76 @@
-const { fakerDE } = require('@faker-js/faker');
 const { PrismaClient } = require('@prisma/client');
+const faker = require('faker');
+
 const prisma = new PrismaClient();
-const userCountTarget = 10;
-const trackCountTarget = 50;
-const watchlistCountTarget = 25;
-const watchlistFillRange = 15;
-async function seed() {
-    // create users
-    const userCountActual = await prisma.benutzer.count();
-    for (let i = 1; i <= userCountTarget - userCountActual; i++) {
-        const user = {
-            Fullname: fakerDE.person.fullName(),
-            Email: fakerDE.internet.email(),
-        };
-        console.log('seeding');
-        const createBenutzer = await prisma.benutzer.create({
-            data: user,
+
+async function seedDatabase() {
+    await createUsers(10);
+    await createSongs(30);
+
+    const users = await prisma.user.findMany();
+    await createWatchlists(users.length * 2, users);
+
+    await fillWatchlists(100);
+}
+
+async function createUsers(count) {
+    const users = [];
+    for (let i = 0; i < count; i++) {
+        const email = faker.internet.email();
+        const fullName = faker.name.findName();
+        users.push({
+            email,
+            fullName,
         });
     }
-    console.log(`${await prisma.benutzer.count()} Benutzer in DB`);
-    // create tracks
-    const trackCountActual = await prisma.track.count();
-    for (let i = 1; i <= trackCountTarget - trackCountActual; i++) {
-        const Track = {
-            name: fakerDE.music.songName(),
-            duration: Math.floor(Math.random() * 300),
-            genre: fakerDE.music.genre(),
-            artist: fakerDE.person.fullName(),
-        };
-        console.log('seeding');
-        const createTrack = await prisma.track.create({
-            data: Track,
+    await prisma.user.createMany({ data: users });
+}
+
+async function createSongs(count) {
+    const songs = [];
+    for (let i = 0; i < count; i++) {
+        const genre = faker.music.genre();
+        const songName = faker.music.songName();
+        songs.push({
+            genre,
+            name: songName,
         });
     }
-    console.log(`${await prisma.track.count()} Tracks in DB`);
-    // create watchlists
-    const userIds = (
-        await prisma.benutzer.findMany({ select: { id: true } })
-    ).map((_) => _.id);
-    const watchlistCountActual = await prisma.watchlist.count();
-    for (let i = 1; i <= watchlistCountTarget - watchlistCountActual; i++) {
-        await prisma.watchlist.create({
-            data: {
-                name: fakerDE.word.noun(),
-                createdAt: fakerDE.date.recent(),
-                User: {
-                    connect: {
-                        id: userIds[Math.floor(Math.random() * userIds.length)],
-                    },
-                },
-            },
+    await prisma.song.createMany({ data: songs });
+}
+
+async function createWatchlists(count, users) {
+    const watchlists = [];
+    for (let i = 0; i < count; i++) {
+        const user = users[Math.floor(Math.random() * users.length)];
+        watchlists.push({
+            userId: user.id,
         });
     }
-    console.log(`${await prisma.watchlist.count()} Watchlists in DB`);
-    // fill watchlists
-    const watchlists = await prisma.watchlist.findMany({
-        select: { id: true },
+    await prisma.watchlist.createMany({ data: watchlists });
+}
+
+async function fillWatchlists(songCount) {
+    const watchlists = await prisma.watchlist.findMany();
+    const songs = await prisma.song.findMany();
+    const watchlistItems = [];
+    for (const watchlist of watchlists) {
+        for (let i = 0; i < songCount; i++) {
+            const song = songs[Math.floor(Math.random() * songs.length)];
+            watchlistItems.push({
+                watchlistId: watchlist.id,
+                songId: song.id,
+            });
+        }
+    }
+    await prisma.watchlistItem.createMany({ data: watchlistItems });
+}
+
+seedDatabase()
+    .catch(e => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
     });
-    const watchlistIds = watchlists.map((_) => _.id);
-    const tracklist = await prisma.track.findMany({ select: { id: true } });
-    for (let i = 0; i < watchlistIds.length; i++) {
-        const rndTracklist = Array.from(
-            new Array(Math.floor(Math.random() * watchlistFillRange))
-        ).map((_) => tracklist[Math.floor(Math.random() * tracklist.length)]);
-        await prisma.watchlist.update({
-            where: {
-                id: watchlistIds[
-                    Math.floor(Math.random() * watchlistIds.length)
-                ],
-            },
-            data: {
-                Track: { connect: rndTracklist },
-            },
-        });
-    }
-}
-function handleError(e) {
-    console.error(`FEHLER: ${e.message}`);
-}
-seed()
-    .then(() => console.log('done seeding'))
-    .catch(handleError);
