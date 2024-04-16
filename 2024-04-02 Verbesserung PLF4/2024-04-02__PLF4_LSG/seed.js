@@ -42,7 +42,7 @@ async function createSongs(count) {
 async function createWatchlists(count, users) {
     const watchlists = [];
     for (let i = 0; i < count; i++) {
-        const user = users[Math.floor(Math.random() * users.length)];
+        const user = users[Math.floor(Math.random() * users.length)];3
         watchlists.push({
             userId: user.id,
         });
