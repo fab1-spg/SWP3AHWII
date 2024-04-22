@@ -3,20 +3,20 @@ const prisma = new PrismaClient();
 
 async function getWatchlistsByTrackName(trackName) {
   const watchlists = await prisma.watchlistItem.findMany({
-      where: { song: { name: trackName } },
-      include: { watchlist: { include: { user: true } } },
+    where: { song: { name: trackName } },
+    include: { watchlist: { include: { user: true } } },
   });
 
 
 
-async function getWatchlistNamesByUser(userId) {
+  async function getWatchlistNamesByUser(userId) {
     const user = await prisma.benutzer.findUnique({
       where: { id: userId },
       include: { watchLists: { select: { name: true } } },
     });
     return user.watchLists.map(watchlist => watchlist.name);
   }
-  
+
   async function getTracksByWatchlist(watchlistId) {
     const watchlist = await prisma.watchlist.findUnique({
       where: { id: watchlistId },
@@ -25,6 +25,6 @@ async function getWatchlistNamesByUser(userId) {
     return watchlist.tracks;
   }
 
-  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist, getWatchlistsByTrackName};
-  
+  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist, getWatchlistsByTrackName };
+
 
