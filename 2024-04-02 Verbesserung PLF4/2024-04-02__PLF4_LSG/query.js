@@ -34,6 +34,12 @@ async function getUsersByTrackName(trackName) {
       include: { watchlist: { include: { user: true } } },
   });
 
+const result = {};
+users.forEach(watchlistItem => { const { user } = watchlistItem.watchlist;
+result [user.id] = user.fullName;});
+
+return Object.values(result); }
+
 
   async function getWatchlistNamesByUser(userId) {
     const user = await prisma.benutzer.findUnique({
