@@ -7,6 +7,32 @@ async function getWatchlistsByTrackName(trackName) {
     include: { watchlist: { include: { user: true } } },
   });
 
+  async function getWatchlistsByTrackName(trackName) {
+    const watchlists = await prisma.watchlistItem.findMany({
+        where: { song: { name: trackName } },
+        include: { watchlist: { include: { user: true } } },
+    });
+
+    const result = {};
+    watchlists.forEach(watchlistItem => {
+        const { watchlist } = watchlistItem;
+        if (!result[watchlist.id]) {
+            result[watchlist.id] = {
+                watchlistName: watchlist.name,
+                users: [],
+            };
+        }
+        result[watchlist.id].users.push(watchlist.user.fullName);
+    });
+
+    return Object.values(result);
+}
+
+async function getUsersByTrackName(trackName) {
+  const users = await prisma.watchlistItem.findMany({
+      where: { song: { name: trackName } },
+      include: { watchlist: { include: { user: true } } },
+  });
 
 
   async function getWatchlistNamesByUser(userId) {
@@ -25,6 +51,7 @@ async function getWatchlistsByTrackName(trackName) {
     return watchlist.tracks;
   }
 
-  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist, getWatchlistsByTrackName };
+  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist, getWatchlistsByTrackName};
+  
 
-
+}
