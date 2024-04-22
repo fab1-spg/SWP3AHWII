@@ -15,7 +15,9 @@
     "dependencies": {
         "@faker-js/faker": "^8.4.1",
         "@prisma/client": "^5.11.0",
-        "prisma": "^5.11.0"
+        "faker": "^6.6.6",
+        "prisma": "^5.12.1",
+        "studio": "^0.13.5"
     },
     "prisma": {
         "seed": "node seed.js"
