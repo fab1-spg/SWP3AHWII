@@ -57,7 +57,7 @@ return Object.values(result); }
     return watchlist.tracks;
   }
 
-  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist, getWatchlistsByTrackName};
+  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist, getWatchlistsByTrackName, getWatchlistNamesByUser,};
   
 
 }
