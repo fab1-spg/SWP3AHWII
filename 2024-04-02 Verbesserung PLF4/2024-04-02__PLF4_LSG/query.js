@@ -1,63 +1,78 @@
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
 
-async function getWatchlistsByTrackName(trackName) {
-  const watchlists = await prisma.watchlistItem.findMany({
-    where: { song: { name: trackName } },
-    include: { watchlist: { include: { user: true } } },
-  });
-
-  async function getWatchlistsByTrackName(trackName) {
-    const watchlists = await prisma.watchlistItem.findMany({
-        where: { song: { name: trackName } },
-        include: { watchlist: { include: { user: true } } },
-    });
-
-    const result = {};
-    watchlists.forEach(watchlistItem => {
-        const { watchlist } = watchlistItem;
-        if (!result[watchlist.id]) {
-            result[watchlist.id] = {
-                watchlistName: watchlist.name,
-                users: [],
-            };
-        }
-        result[watchlist.id].users.push(watchlist.user.fullName);
-    });
-
-    return Object.values(result);
+if (process.argv.length !== 3) {
+    console.error('No user provided, exiting');
+    process.exit(1);
 }
 
-async function getUsersByTrackName(trackName) {
-  const users = await prisma.watchlistItem.findMany({
-      where: { song: { name: trackName } },
-      include: { watchlist: { include: { user: true } } },
-  });
-
-const result = {};
-users.forEach(watchlistItem => { const { user } = watchlistItem.watchlist;
-result [user.id] = user.fullName;});
-
-return Object.values(result); }
-
-
-  async function getWatchlistNamesByUser(userId) {
-    const user = await prisma.benutzer.findUnique({
-      where: { id: userId },
-      include: { watchLists: { select: { name: true } } },
-    });
-    return user.watchLists.map(watchlist => watchlist.name);
-  }
-
-  async function getTracksByWatchlist(watchlistId) {
-    const watchlist = await prisma.watchlist.findUnique({
-      where: { id: watchlistId },
-      include: { tracks: true },
-    });
-    return watchlist.tracks;
-  }
-
-  module.exports = { getWatchlistNamesByUser, getTracksByWatchlist, getWatchlistsByTrackName, getWatchlistNamesByUser,};
-  
-
+const userName = process.argv[2].trim();
+if (!userName) {
+    console.error('Empty username provided, exiting');
+    process.exit(1);
 }
+
+console.log(`Finding watchlist names for ${userName}`);
+
+async function getWatchlistNamesForUser(userName) {
+    try {
+        return await prisma.watchlist.findMany({
+            select: {
+                id: true,
+                name: true,
+            },
+            where: {
+                benutzer: {
+                    fullname: userName,
+                },
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching watchlist names:', error);
+        process.exit(1);
+    }
+}
+
+async function tracksFromWatchlist(id) {
+    try {
+        return await prisma.track.findMany({
+            where: {
+                watchLists: {
+                    some: { id },
+                },
+            },
+        });
+    } catch (error) {
+        console.error(`Error fetching tracks for watchlist ${id}:`, error);
+        return [];
+    }
+}
+
+async function main() {
+    const lists = await getWatchlistNamesForUser(userName);
+
+    if (lists.length === 0) {
+        console.log(`${userName} has no watchlists`);
+        return;
+    }
+
+    const promises = lists.map(async (wl) => {
+        const tracks = await tracksFromWatchlist(wl.id);
+        console.log(
+            `${userName}'s Watchlist "${wl.name}" ... ${tracks.length} tracks`
+        );
+        tracks.forEach((t) => {
+            console.log(`    ${t.name} by ${t.artist} (${t.duration} secs)`);
+        });
+    });
+
+    await Promise.all(promises);
+}
+
+main()
+    .catch((error) => {
+        console.error('An unexpected error occurred:', error);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });
